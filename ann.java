@@ -1,23 +1,20 @@
-import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.io.InputStreamReader;
-import java.time.format.TextStyle;
 import java.util.Arrays;
 
 public class ann  
 {  
+    //declare arrays and training / testing data
     static int epoch = 1;
-
     static double[] input = new double[45];
-    static double[][] w1 = new double[3][45];
-    static double[] middleLayer = {0,0,0};
+    static double[][] w1 = new double[2][45];
+    static double[] middleLayer = {0,0};
     static double[][] w2 = new double[3][10];
     static double[] output = {0,0,0,0,0,0,0,0,0,0};
     static double[] error = new double[10];
     static double[] errorGradient = new double[10];
-    static double[] middleGradient = new double[3];
+    static double[] middleGradient = new double[2];
     static double[] outputWeightAdjustment = new double[10];
     static double[] outputThreshhold = {-1,-1,-1,-1,-1,-1,-1,-1,-1,-1};
     static double[] outputThreshholdAdjustment = new double[10];
@@ -51,6 +48,7 @@ public class ann
     
     public static void main(String args[]) throws IOException
     {  
+        //initialize the full training data array
         trainingData[0] = zero;
         trainingData[1] = one;
         trainingData[2] = two;
@@ -62,8 +60,10 @@ public class ann
         trainingData[8] = eight;
         trainingData[9] = nine;
 
+        //set the learning rate
         final double rate = 0.1;
 
+        //initialize the correect answers data set
         desiredData[0] = zeroDes;
         desiredData[1] = oneDes;
         desiredData[2] = twoDes;
@@ -75,117 +75,114 @@ public class ann
         desiredData[8] = eightDes;
         desiredData[9] = nineDes;
 
-        double sumStep = 0;
-        double sumLin = 0;
+        //define the input values to the sig and tanh functions
         double sumSig = 0;
         double sumTan = 0;
-        double sumRelu = 0;
 
         //randomly initialize the weights
-        for(int x = 0; x<3; x++)
+        for(int x = 0; x<2; x++)
         {
             for(int i = 0; i<45; i++)
             {
                 w1[x][i] = (Math.random()*((.5)-(-.5))+(-.5));
-                //w1[x][i] = (Math.random()*((2.4/45)-(-2.4/45))+(-2.4/45));
                 w1[x][i] = Math.round(w1[x][i]*10000);
                 w1[x][i] = w1[x][i]/10000;
             }
         } 
-        for(int x = 0; x<3; x++)
+        for(int x = 0; x<2; x++)
         {
             for(int i = 0; i<10; i++)
             {
-                //w2[x][i] = (Math.random()*((2.4/10)-(-2.4/10))+(-2.4/10));
                 w2[x][i] = (Math.random()*((.5)-(-.5))+(-.5));
                 w2[x][i] = Math.round(w2[x][i]*10000);
                 w2[x][i] = w2[x][i]/10000;
             }
         }
 
-        sumErrorSq = 101;
-
-        while(sumErrorSq>3)
+        //traing while the average sum of errors squared is above 2
+        sumErrorSq = 3;
+        while(sumErrorSq>2)
         {
             sumErrorSq = 0;
+            //loop through each training number
             for(int z = 0; z<10; z++)
             {
-                //System.out.println("Training on number "+z);
+                System.out.println("Training on number "+z);
                 input = trainingData[z];
+                //multiply the input layer by its respective weight to get the sum to feed to activation functions
                 for(int i = 0; i<45; i++)
                 {
-                    //sumStep += input[i]*w1[0][i];
-                    //sumLin += input[i]*w1[1][i];
                     sumSig += input[i]*w1[0][i];
                     sumTan += input[i]*w1[1][i];
-                    sumRelu += input[i]*w1[2][i];
                 }
-
-                //middleLayer[0] = step(sumStep-1);
-                //middleLayer[1] = linear(sumLin-1);
+                //feed to activation function
                 middleLayer[0] = sigmoid(sumSig-1);
                 middleLayer[1] = tanh(sumTan-1);
-                //middleLayer[2] = relu(sumRelu-1);
 
-                sumStep = 0;
-                sumLin = 0;
+                //reset the sums
                 sumSig = 0;
                 sumTan = 0;
-                sumRelu = 0;
 
-            
+                //get the output value by multiplying the activation function output with its weight, add them together and subtract threshold value
                 for(int j = 0; j<10; j++)
                 {
                     output[j] = sigmoid(middleLayer[0]*w2[0][j]+middleLayer[1]*w2[1][j]-outputThreshhold[j]);
                 }
 
-
-                /**
-                 * You are good till here
-                 * Review Pinned lecture slide 18 on weight training cause we aint doing it right
-                 */
-                //System.out.println("Outputs:");
+                //print the ouputs
+                System.out.println("Outputs:");
                 for(int j = 0; j<10; j++)
                 {
-                   // System.out.println(output[j]);
+                   System.out.println(output[j]);
                 }
+                //go through the weights and train them
                 for(int i = 0; i<2; i++)
                 {
                     for(int j = 0; j<10; j++)
                     {
+                        //get the error
                         error[j] = desiredData[z][j] - output[j];
-                        /*if(error[j]>10)
-                        {
-                            error[j] = Math.random()*(10);
-                        }*/
+
+                        //get the error gradient
                         errorGradient[j] = output[j]*(1-output[j])*error[j];
+
+                        //get the output weight adjustment value
                         outputWeightAdjustment[j] = rate*middleLayer[i]*errorGradient[j];
+
+                        //calculate the sum of the squared error
                         sumErrorSq += error[j]*error[j];
+
+                        //adjust the output weights
                         w2[i][j] = w2[i][j]-outputWeightAdjustment[j];
+
+                        //calculate the ouptput threshold adjustment value and update it
                         outputThreshholdAdjustment[j] = rate*(-1)*errorGradient[j];
                         outputThreshhold[j] = outputThreshhold[j]+outputThreshholdAdjustment[j];
                     }
+                    //calculate the average of the ouptput weight adjustment
                     double outputAVG = Arrays.stream(outputWeightAdjustment).sum();
                     outputAVG = outputAVG/10;
-                    double w2AVG = Arrays.stream(w2[i]).sum();
-                    outputAVG = outputAVG/10;
-                    middleGradient[i] = middleLayer[i]*(1-middleLayer[i])*outputAVG*w2AVG;
+
+                    //calculate the middle layer gradient value and adjust them
+                    middleGradient[i] = middleLayer[i]*(1-middleLayer[i])*outputAVG;
                     for(int j = 0; j<45; j++)
                     {
                         w1[i][j] = w1[i][j] - rate*middleGradient[i]*input[j];
                     }
                     
                 }
-                //System.out.println("Errors:");
+                //print the list of errors and reset them
+                System.out.println("Errors:");
                 for(int j = 0; j<10; j++)
                 {
-                    //System.out.println(error[j]);
+                    System.out.println(error[j]);
                     //reset error arrays
                     error[j] = 0;
                 }
             }
+            //get the average error and print it
             sumErrorSq = sumErrorSq/10;
-            //System.out.println("Sum Errors Squared:"+sumErrorSq);
+            System.out.println("Sum Errors Squared:"+sumErrorSq);
             try {
                 BufferedWriter out = new BufferedWriter(new FileWriter("EpochData.txt",true));
                 out.write(epoch+","+sumErrorSq+"\n");
@@ -195,14 +192,11 @@ public class ann
                 e.printStackTrace();
             }
             epoch++;
-            
+            //reset the middle layer
             middleLayer[0] = 0;
-            middleLayer[1] = 0;
-            middleLayer[2] = 0;
-            //middleLayer[3] = 0;
-            //middleLayer[4] = 0;
-            
+            middleLayer[1] = 0;           
         }
+        //feed in the 30 test cases and determine if the output is correct or not
         int correct = 0;
         for(int z = 0; z<30;z++)
         {
@@ -210,23 +204,14 @@ public class ann
 
             for(int i = 0; i<45; i++)
             {
-                //sumStep += input[i]*w1[0][i];
-                //sumLin += input[i]*w1[1][i];
                 sumSig += input[i]*w1[0][i];
                 sumTan += input[i]*w1[1][i];
-                sumRelu += input[i]*w1[2][i];
             }
-            //middleLayer[0] = step(sumStep-1);
-            //middleLayer[1] = linear(sumLin-1);
             middleLayer[0] = sigmoid(sumSig-1);
             middleLayer[1] = tanh(sumTan-1);
-            //middleLayer[2] = relu(sumRelu-1);
 
-            sumStep = 0;
-            sumLin = 0;
             sumSig = 0;
             sumTan = 0;
-            sumRelu = 0;
 
             double max = 0;
             double maxPos = 0;
@@ -265,22 +250,7 @@ public class ann
         System.out.println("Correct: "+correct);
     }
 
-    public static double step(double input)
-    {
-        double result = 0;
-        if(input > result)
-        {
-            result = 1;
-        }
-        return result;
-    }
-
-    //presenting the most useless function I have ever coded
-    public static double linear(double input)
-    {
-        return input;
-    }
-
+    //sigmoid function
     public static double sigmoid(double input)
     {
         double result = java.lang.Math.exp(-input);
@@ -289,17 +259,13 @@ public class ann
         return result;
     }
 
+    //tanh function
     public static double tanh(double input)
     {
         double numerator = (java.lang.Math.exp(input) - java.lang.Math.exp(-input));
         double denominator = (java.lang.Math.exp(input) + java.lang.Math.exp(-input));
         double result = numerator / denominator;
         return result;
-    }
-
-    public static double relu(double input)
-    {
-        return java.lang.Math.max(0, input);
     }
     
 }  
